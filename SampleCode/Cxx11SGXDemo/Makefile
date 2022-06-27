@@ -210,66 +210,83 @@ endif
 endif
 
 run: all
+	echo "1 start run all"
 ifneq ($(Build_Mode), HW_RELEASE)
+	echo "2 start build mode "
 	@$(CURDIR)/$(App_Name)
 	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
 
 .config_$(Build_Mode)_$(SGX_ARCH):
+	echo "3 start .config_$(Build_Mode)_$(SGX_ARCH)"
 	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
 	@touch .config_$(Build_Mode)_$(SGX_ARCH)
 
 ######## App Objects ########
 
 App/Enclave_u.h: $(SGX_EDGER8R) Enclave/Enclave.edl
+	echo "4 start App/Enclave_u.h: $(SGX_EDGER8R) Enclave/Enclave.edl"
 	@cd App && $(SGX_EDGER8R) --untrusted ../Enclave/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
 App/Enclave_u.c: App/Enclave_u.h
+	echo "5 start App/Enclave_u.c: App/Enclave_u.h"
 
 App/Enclave_u.o: App/Enclave_u.c
+	echo "6 start App/Enclave_u.o: App/Enclave_u.c"
 	@$(CC) $(SGX_COMMON_CFLAGS) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 App/%.o: App/%.cpp App/Enclave_u.h
+	echo "7 start App/%.o: App/%.cpp App/Enclave_u.h"
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
 $(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
+	echo "8 start $(App_Name): App/Enclave_u.o $(App_Cpp_Objects)"
 	@$(CXX) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 ######## Enclave Objects ########
 
 Enclave/Enclave_t.h: $(SGX_EDGER8R) Enclave/Enclave.edl
+	echo "9 start Enclave/Enclave_t.h: $(SGX_EDGER8R) Enclave/Enclave.edl"
 	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
 Enclave/Enclave_t.c: Enclave/Enclave_t.h
+	echo "10 start Enclave/Enclave_t.c: Enclave/Enclave_t.h"
 
 Enclave/Enclave_t.o: Enclave/Enclave_t.c
+	echo "11 start Enclave/Enclave_t.o: Enclave/Enclave_t.c"
 	@$(CC) $(SGX_COMMON_CFLAGS) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 Enclave/%.o: Enclave/%.cpp
+	echo "12 start Enclave/%.o: Enclave/%.cpp"
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
 $(Enclave_Cpp_Objects): Enclave/Enclave_t.h
+	echo "13 start $(Enclave_Cpp_Objects): Enclave/Enclave_t.h"
 
 $(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
+	echo "14 start $(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)"
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)
+	echo "15 start $(Signed_Enclave_Name): $(Enclave_Name)"
 	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
 ######## Library ########
-libtee.so: App/Enclave_u.o $(App_Cpp_Objects) 
+libtee.so: App/Enclave_u.o $(App_Cpp_Objects)
+	echo "16 start libtee.so: App/Enclave_u.o $(App_Cpp_Objects) "
 	$(CXX) -shared $^ -o $@ $(App_Link_Flags) 
 
 cgo: libtee.so
+	echo "17 start cgo: libtee.so"
 	LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:. go run cgo.go
 
 .PHONY: clean
